@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Admin Monitoring Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+      .frame-card { min-height: 480px; }
+      .alert-box { max-height: 320px; overflow-y: auto; }
+    </style>
+  </head>
+  <body>
+    <div class="container py-4">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+          <h1 class="h3">Admin Monitoring Dashboard</h1>
+          <p class="mb-0">Live camera view for <strong>{{ area }}</strong>. Alerts appear as unauthorized or unknown faces are detected.</p>
+        </div>
+        <div>
+          <a class="btn btn-secondary" href="{{ url_for('index') }}">Home</a>
+        </div>
+      </div>
+
+      {% with messages = get_flashed_messages() %}
+        {% if messages %}
+          <div class="alert alert-info">
+            <ul class="mb-0">
+              {% for message in messages %}
+                <li>{{ message }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% endif %}
+      {% endwith %}
+
+      <div class="row mb-3">
+        <div class="col-md-6">
+          <div class="card frame-card">
+            <div class="card-header">Live Camera Feed</div>
+            <div class="card-body p-0">
+              <img id="camera-stream" src="{{ url_for('video_feed') }}?area={{ area }}" class="img-fluid w-100" alt="Live Camera Feed">
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <div class="card mb-3">
+            <div class="card-header">Status</div>
+            <div class="card-body">
+              <form id="area-form" class="row g-2 align-items-center mb-3" method="get" action="{{ url_for('admin_dashboard') }}">
+                <div class="col-auto">
+                  <label for="area-select" class="col-form-label">Monitor Area</label>
+                </div>
+                <div class="col-auto">
+                  <select id="area-select" name="area" class="form-select">
+                    <option value="Lobby" {% if area == 'Lobby' %}selected{% endif %}>Lobby</option>
+                    {% for allowed_area in areas %}
+                      <option value="{{ allowed_area }}" {% if area == allowed_area %}selected{% endif %}>{{ allowed_area }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="col-auto">
+                  <button type="submit" class="btn btn-primary">Switch</button>
+                </div>
+              </form>
+
+              <p class="mb-1">Employee profiles loaded: <strong>{{ employee_count }}</strong></p>
+              <p class="mb-1">Monitoring area: <strong>{{ area }}</strong></p>
+              <div class="d-flex gap-2">
+                <button id="clear-alerts" class="btn btn-sm btn-danger">Clear Alerts</button>
+                <form method="post" action="{{ url_for('admin_retrain') }}">
+                  <input type="hidden" name="area" value="{{ area }}">
+                  <button type="submit" class="btn btn-sm btn-success">Retrain Embeddings</button>
+                </form>
+              </div>
+            </div>
+          </div>
+
+          <div class="card alert-box mb-3">
+            <div class="card-header">Alerts</div>
+            <div class="card-body px-2 py-2" id="alerts-container">
+              {% if alerts %}
+                {% for alert in alerts %}
+                  <div class="alert alert-danger py-2 mb-2" role="alert">
+                    <strong>{{ alert.timestamp }}</strong><br>{{ alert.message }}
+                  </div>
+                {% endfor %}
+              {% else %}
+                <div class="alert alert-secondary py-2 mb-0">No alerts yet.</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">Employee Registry</div>
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Name</th>
+                      <th>Allowed Area</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for employee in employees %}
+                      <tr>
+                        <td>{{ employee.employee_id }}</td>
+                        <td>{{ employee.name }}</td>
+                        <td>{{ employee.allowed_area }}</td>
+                      </tr>
+                    {% else %}
+                      <tr>
+                        <td colspan="3" class="text-center">No employees registered yet.</td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      async function refreshAlerts() {
+        const response = await fetch('{{ url_for('admin_alerts') }}');
+        if (!response.ok) return;
+        const alerts = await response.json();
+        const container = document.getElementById('alerts-container');
+        container.innerHTML = '';
+        if (alerts.length === 0) {
+          container.innerHTML = '<div class="alert alert-secondary py-2 mb-0">No alerts yet.</div>';
+          return;
+        }
+
+        alerts.forEach(alert => {
+          const alertDiv = document.createElement('div');
+          alertDiv.className = 'alert alert-danger py-2 mb-2';
+          alertDiv.innerHTML = `<strong>${alert.timestamp}</strong><br>${alert.message}`;
+          container.appendChild(alertDiv);
+        });
+      }
+
+      document.getElementById('clear-alerts').addEventListener('click', async () => {
+        await fetch('{{ url_for('clear_alerts') }}', { method: 'POST' });
+        refreshAlerts();
+      });
+
+      setInterval(refreshAlerts, 3000);
+      refreshAlerts();
+    </script>
+  </body>
+</html>

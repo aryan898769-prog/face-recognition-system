@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Face Recognition Security</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  </head>
+  <body>
+    <div class="container py-5">
+      <h1 class="mb-4">Face Recognition Security System</h1>
+      <p>Use the web interface to register employees with face images and allowed areas.</p>
+      <a class="btn btn-primary me-2" href="{{ url_for('register') }}">Register New Employee</a>
+      <a class="btn btn-warning" href="{{ url_for('admin_dashboard') }}">Admin Dashboard</a>
+    </div>
+  </body>
+</html>
